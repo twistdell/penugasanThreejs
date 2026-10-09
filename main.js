@@ -23,7 +23,7 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.maxPolarAngle = Math.PI / 2 - 0.01;
 
-// 4. LIGHTING SYSTEM
+// 4. LIGHTING
 const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
 scene.add(ambientLight);
 
@@ -32,7 +32,7 @@ mainLight.position.set(5, 8, 5);
 mainLight.castShadow = true;
 scene.add(mainLight);
 
-// Lampu Sorot Depan Mobil (Headlights)
+// Lampu Depan
 const headlightLeft = new THREE.SpotLight(0xffffff, 0, 15, Math.PI / 8, 0.5);
 headlightLeft.position.set(-0.6, 0.6, 1.8);
 const headlightRight = headlightLeft.clone();
@@ -46,7 +46,7 @@ headlightLeft.target = headlightTarget;
 headlightRight.target = headlightTarget;
 scene.add(headlightLeft, headlightRight);
 
-// 5. ENVIRONMENT & FLOOR
+// 5. FLOOR
 const gridHelper = new THREE.GridHelper(30, 30, 0x00f0ff, 0x222233);
 gridHelper.position.y = -0.01;
 scene.add(gridHelper);
@@ -58,13 +58,15 @@ floor.rotation.x = -Math.PI / 2;
 floor.receiveShadow = true;
 scene.add(floor);
 
-// 6. MODEL LOADING & CAR COLOR CONTROL
+// 6. MODEL LOADING
 let carModel = null;
 let carBodyMaterials = [];
 const carContainer = new THREE.Group();
 scene.add(carContainer);
 
 const loader = new GLTFLoader();
+
+// Coba muat model mclaren_spider.glb dari folder public
 loader.load(
     '/mclaren_spider.glb',
     (gltf) => {
@@ -74,8 +76,7 @@ loader.load(
             if (child.isMesh) {
                 child.castShadow = true;
                 child.receiveShadow = true;
-
-                if (child.material && child.material.name.toLowerCase().includes('body')) {
+                if (child.material) {
                     carBodyMaterials.push(child.material);
                 }
             }
@@ -94,32 +95,73 @@ loader.load(
     (error) => console.error('Gagal memuat model:', error)
 );
 
-// 7. INTERACTIVE UI & CONTROLS
+// 7. UI INTERAKTIF (PERBAIKAN TAMPILAN)
 let isRotating = false;
 let headlightsOn = false;
 
+// Bersihkan UI lama dari HTML bawaan agar tidak bertabrakan
+const oldUI = document.querySelector('.ui-container') || document.querySelector('.controls') || document.querySelector('div');
+if (oldUI && oldUI !== document.body) {
+    oldUI.style.display = 'none';
+}
+
 const style = document.createElement('style');
 style.innerHTML = `
-  .ui-container { position: absolute; top: 20px; left: 20px; z-index: 10; display: flex; flex-direction: column; gap: 10px; font-family: sans-serif; }
-  .btn-group { display: flex; gap: 8px; }
-  .ui-btn { background: rgba(15, 17, 26, 0.8); color: white; border: 1px solid #00f0ff; padding: 8px 12px; border-radius: 6px; cursor: pointer; backdrop-filter: blur(5px); }
+  #custom-ui {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    font-family: sans-serif;
+    background: rgba(15, 17, 26, 0.85);
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 240, 255, 0.3);
+    backdrop-filter: blur(8px);
+  }
+  .ui-row { display: flex; gap: 8px; align-items: center; }
+  .ui-title { color: #00f0ff; font-weight: bold; font-size: 14px; margin-bottom: 4px; }
+  .ui-btn {
+    background: #1a1d2d;
+    color: white;
+    border: 1px solid #00f0ff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+  }
   .ui-btn:hover { background: #00f0ff; color: #000; }
-  .color-btn { width: 30px; height: 30px; border-radius: 50%; border: 2px solid white; cursor: pointer; }
+  .color-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid white;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  .color-btn:hover { transform: scale(1.15); }
 `;
 document.head.appendChild(style);
 
 const ui = document.createElement('div');
-ui.className = 'ui-container';
+ui.id = 'custom-ui';
 ui.innerHTML = `
-  <div class="btn-group">
+  <div class="ui-title">McLaren 3D Showcase</div>
+  <div class="ui-row">
     <button class="ui-btn" id="btn-rotate">Toggle Auto-Rotate</button>
     <button class="ui-btn" id="btn-light">Lampu Depan</button>
   </div>
-  <div class="btn-group">
+  <div class="ui-title" style="margin-top:6px;">Warna Bodi</div>
+  <div class="ui-row">
     <button class="color-btn" style="background:#ff0000" data-color="0xff0000"></button>
     <button class="color-btn" style="background:#00f0ff" data-color="0x00f0ff"></button>
     <button class="color-btn" style="background:#ffaa00" data-color="0xffaa00"></button>
     <button class="color-btn" style="background:#ffffff" data-color="0xffffff"></button>
+    <button class="color-btn" style="background:#111111" data-color="0x111111"></button>
   </div>
 `;
 document.body.appendChild(ui);
@@ -128,7 +170,7 @@ document.getElementById('btn-rotate').addEventListener('click', () => { isRotati
 
 document.getElementById('btn-light').addEventListener('click', () => {
     headlightsOn = !headlightsOn;
-    const intensity = headlightsOn ? 10 : 0;
+    const intensity = headlightsOn ? 12 : 0;
     headlightLeft.intensity = intensity;
     headlightRight.intensity = intensity;
 });
@@ -136,7 +178,9 @@ document.getElementById('btn-light').addEventListener('click', () => {
 document.querySelectorAll('.color-btn').forEach((btn) => {
     btn.addEventListener('click', (e) => {
         const hexColor = parseInt(e.target.dataset.color);
-        carBodyMaterials.forEach((mat) => mat.color.setHex(hexColor));
+        carBodyMaterials.forEach((mat) => {
+            if (mat.color) mat.color.setHex(hexColor);
+        });
     });
 });
 
@@ -153,7 +197,7 @@ function animate() {
 }
 animate();
 
-// 9. RESPONSIVE WINDOW
+// 9. RESPONSIVE
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
